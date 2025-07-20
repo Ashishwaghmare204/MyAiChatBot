@@ -1,10 +1,21 @@
 let prompt=document.querySelector("#prompt");
 let chatContainer=document.querySelector(".chat-container");
+let imagebtn=document.querySelector("#image");
+let imageinput=document.querySelector("#image input");
 const Api_url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBcwV6f_qKKqFY_uZn8zz5DDHu3GURS7UQ";
 let user={
-    data:null,
+    message:null,
+    file: {
+      mime_type:null,
+      data:null
+    }
 }
 async function generateResponse(aiChatBox){
+    let parts = [];
+    parts.push({ "text": user.message });
+    if (user.file.data) {
+      parts.push({ "inline_data": user.file });
+    }
     let RequestOptions={
         method: 'POST',
         headers: {
@@ -12,11 +23,7 @@ async function generateResponse(aiChatBox){
         body: JSON.stringify({
     "contents": [
       {
-        "parts": [
-          {
-            "text": user.data
-          }
-        ]
+        "parts": parts
       }
     ]
   })
@@ -33,6 +40,9 @@ async function generateResponse(aiChatBox){
             console.error("Error:", error);
             aiChatBox.querySelector(".bot-chat-text").textContent = "Error generating response.";
        } 
+       finally{
+        chatContainer.scrollTo({top:chatContainer.scrollHeight,behavior:"smooth"})
+       }
 
 }
 function CreateChatBox(html, className){
@@ -43,14 +53,15 @@ function CreateChatBox(html, className){
 }
 
 function handleChatResponse(message){
-    user.data=message; // Store the user message in the user object
+    user.message=message; // Store the user message in the user object
    let html=` <div class="user-chat-box">
             <img src="person.png" alt="userImage" id="userImage" width="80"> 
             <div class="user-chat-area">
-            <p class="user-chat-text">${user.data}</p>
+            <p class="user-chat-text">${user.message}</p>
             </div>`
             let userChatBox=CreateChatBox(html,"user-chat-box");
     chatContainer.appendChild(userChatBox);
+    chatContainer.scrollTo({top:chatContainer.scrollHeight,behavior:"smooth"})
 
 }
 
@@ -74,8 +85,25 @@ prompt.addEventListener("keydown", function(event) {
              ">`
             let aiChatBox=CreateChatBox(html,"bot-chat-box");
             chatContainer.appendChild(aiChatBox);
-            chatContainer.scrollTop=chatContainer.scrollHeight; // Scroll to the bottom of the chat container
+            
             generateResponse(aiChatBox);
        }, 600); // Simulate a delay for the bot response
     }
     });
+
+    imageinput.addEventListener("change", () => {
+      const file = imageinput.files[0];
+      if (!file) return;
+      let reader = new FileReader();
+      reader.onload = (e) => {
+        let base64string = e.target.result.split(",")[1];
+        user.file = {
+          mime_type: file.type, // FIXED
+          data: base64string
+        };
+      };
+      reader.readAsDataURL(file);
+    })
+imagebtn.addEventListener("click", () => {
+    imageinput.click(); // open file dialog when button is clicked
+});
